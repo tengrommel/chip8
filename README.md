@@ -78,10 +78,25 @@ Events are what trigger the transitions.
 ## Game Data
 > States can have arbitrary data associated with them. If you need to store data that is tightly coupled to your State, the classic way is to put it in the State's Struct.
 
+## Event Handling
+> It regroups multiple types of events that are emitted throughout the engine by default
 
+## Entity and Component
 
+- An Entity represents a single object in your world.
+- Component represents one aspect of an object
 
-# Pong Tutorial
+## Storages
+> There are a few storage strategies for different usage scenarios
+- DenseVecStorage
+> Elements are stored in a contiguous vector
+- VecStorage
+> Elements are stored into a sparse array
+- FlaggedStorage
+> Used to keep track of changes of a component
+
+## Resource
+> A resource is any type that stores data that you might need for your game AND that is not specific to an entity.
 
 # Math
 
