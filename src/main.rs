@@ -1,4 +1,4 @@
-use async_std::task::block_on;
+use async_std::task::{block_on, sleep};
 use std::{thread, time};
 use futures::future::join;
 
@@ -7,12 +7,12 @@ async fn hello() {
 }
 
 async fn connect_db() -> String {
-    thread::sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_secs(1)).await;
     String::from("db client")
 }
 
 async fn connect_redis() -> String {
-    thread::sleep(time::Duration::from_secs(1));
+    sleep(time::Duration::from_secs(1)).await;
     String::from("redis client")
 }
 
