@@ -103,3 +103,31 @@ The game can be divided into different states
 - MainMenuState
 - PauseState
 - ResultState
+
+# State Manager
+
+Amethyst has a built-in state manager, which allows easily switching between different States. It is based on the concept of a pushdown-automaton, which is a combination of a Stack and a State Machine.
+
+# State 
+> The Stack concept makes it so you can "push" States on top of each other.
+
+If we take the pong example of earlier, you can push the PauseState over the GameplayState.
+
+When you want to go out of pause, you pop the PauseState out of the stack and you are back into the GameplayState, just as you left it.
+
+# State Machine
+> The concept of State Machine can be pretty complex, but here we will only explain the basics of it. The State Machine is usually composed of two elements: Transitions and Events.
+
+Transitions are simply the "switching" between two states.
+
+For example, from LoadingState, go to state MainMenuState.
+
+Amethyst has multiple types of transitions
+
+- You can Push a State over another
+   
+- You can also Switch a State, which replaces the current State with a new one
+
+**Events are what trigger the transitions. In the case of amethyst, it is the different methods called on the State. Continue reading to learn about them.**
+
+
