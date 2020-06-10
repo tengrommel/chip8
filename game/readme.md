@@ -80,4 +80,26 @@ If you want to use the latest unreleased changes, your Cargo.toml file should lo
 
 - If you don't understand how something works in amethyst, knowing the concepts presented here will help you understand how some implementations are made.
 
+# State
+>What is a state?
 
+>The word "state" can mean a lot of different things in computer science. In the case of amethyst, it is used to represent the "game state".
+
+A game state is a general and global section of the game.
+
+## Example
+
+As an example, let's say you are making a pong game.
+
+- When the user opens up the game, it first loads all the assets and shows a loading screen.
+- Then, the main menu shows up, asking you if you want to start a game in single or multiplayer.
+- Once you select an option, the game displays the paddles and the ball and starts playing.
+- By pressing escape, you can toggle the "pause" menu.
+- Once the score limit is reached, a result screen is shown with a button to go back to the main menu.
+
+The game can be divided into different states
+
+- LoadingState
+- MainMenuState
+- PauseState
+- ResultState
