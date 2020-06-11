@@ -130,4 +130,33 @@ Amethyst has multiple types of transitions
 
 **Events are what trigger the transitions. In the case of amethyst, it is the different methods called on the State. Continue reading to learn about them.**
 
+# Life Cycle
+> States are only valid for a certain period of time, during which a lot of things can occur. A State contains methods methods methods that reflect the most common of those events:
 
+- on_start: When a State is added to the stack, this method is called on it.
+- on_stop: When a State is removed from the stack, this method is called on it.
+- on_pause: When a State is pushed over the current one, the current one is paused, and this method is called on it.
+- on_resume: When the State that was pushed over the current State is popped, the current one resumes, and this method is called on the now-current State.
+- handle_event: Allows easily handling events, like the window closing or a key being pressed.
+- fixed_update: This method is called on the active State at a fixed time interval (1/60th second by default).
+- update: This method is called on the active State as often as possible by the engine
+- shadow_update: This method is called as often as possible by the engine on all States which are on the StateMachines stack, including the active State. Unlike update, this does not return a Trans.
+- shadow_fixed_update: This method is called at a fixed time interval (1/60th second by default) on all States which are on the StateMachines stack, including the active State. Unlike fixed_update, this does not return a Trans.
+
+If you aren't using SimpleState or EmptyState, you must implement the update method to call data.data.update(&mut data.world).
+
+# Game Data
+
+States can have arbitrary data associated with them. If you need to store data that is tightly coupled to your State, the classic way is to put it in the State's struct.
+
+States also have internal data, which is any type T. In most cases, the two following are the most used: () and GameData.
+
+() means that there is no data associated with this State. This is usually used for tests and not for actual games. GameData is the de-facto standard. It is a struct containing a Dispatcher. This will be discussed later.
+
+When calling your State's methods, the engine will pass a StateData struct which contains both the World (which will also be discussed later) and the Game Data type that you chose
+
+# Code 
+
+Yes! It's finally time to get some code in here!
+
+Here will just be a small code snippet that shows the basics of State's usage. For more advanced examples, see the following pong tutorial.
