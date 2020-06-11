@@ -285,3 +285,29 @@ To make Application aware of the change to which events to send to the state, yo
  
  
  **This is done by replacing Application::build (or Application::new) with CoreApplication::<_, MyEvent, MyEventReader>::build() (or CoreApplication::<_, MyEvent, MyEventReader>::new()).**
+ 
+# Entity and Component
+>What are Entity and Component?
+
+An Entity represents a single object in your world. Component represents one aspect of an object. For example, a bottle of water has a shape, a volume, a color and is made of a material (usually plastic). In this example, the bottle is the entity, and the properties are components.
+
+# Entity and Component in Amethyst
+>In an inheritance design, entity usually contains components. All the data and methods related to an entity are stored within. However, in the ECS design, entity is just a general purpose object. In fact, the implementation of Entity in Amethyst is simply:
+
+    struct Entity(u32, Generation);
+
+where u32 is the id of the entity and generation is used to check if the entity has been deleted.
+
+*Entity s are stored in a special container EntitiesRes. Whereas the data associated with the entities are grouped into components and stored in the designated storages.*
+
+Consider an example where you have three objects: two bottles and a person.
+
+    object	    x	    y	    shape     color	  name
+    Bottle A	150.0	202.1	"round"	  "red"	
+    Bottle B	570.0	122.0	"square"  "white"	
+    Person C	100.5	300.8			          "Peter"
+
+We can separate bottle's properties into PositionComponent and BottleComponent, and person's properties into PositionComponent and PersonComponent. Here's an illustration of how the three objects would be stored.
+
+**entities do not store data. Nor do they know any information about their components. 
+They serve the purpose of object identification and tracking object existence. The component storage stores all the data and their connection to entities.**
