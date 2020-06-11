@@ -160,3 +160,128 @@ When calling your State's methods, the engine will pass a StateData struct which
 Yes! It's finally time to get some code in here!
 
 Here will just be a small code snippet that shows the basics of State's usage. For more advanced examples, see the following pong tutorial.
+
+    extern crate amethyst;
+    use amethyst::prelude::*;
+    
+    struct GameplayState {
+        /// The `State`-local data. Usually you will not have anything.
+        /// In this case, we have the number of players here.
+        player_count: u8,
+    }
+    
+    impl SimpleState for GameplayState {
+        fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {
+            println!("Number of players: {}", self.player_count);
+        }
+    }
+
+That's a lot of code, indeed!
+
+We first declare the State's struct GameplayState.
+
+In this case, we give it some data: player_count, a byte.
+
+Then, we implement the SimpleState trait for our GameplayState. SimpleState is a shorthand for State<GameData<'static, 'static>, ()> where GameData is the internal shared data between states.
+
+# Switching State
+> Now, if we want to change to a second state, how do we do it?
+
+Well, we'll need to use one of the methods that return the Trans type.
+
+Those are:
+- handle_event
+- fixed_update
+- update
+
+Let's use handle_event to go to the PausedState and come back by pressing the "Escape" key.
+
+    extern crate amethyst;
+    use amethyst::prelude::*;
+    use amethyst::input::{VirtualKeyCode, is_key_down};
+    
+    struct GameplayState;
+    struct PausedState;
+    
+    // This time around, we are using () instead of GameData, because we don't have any `System`s that need to be updated.
+    // (They are covered in the dedicated section of the book.)
+    // Instead of writing `State<(), StateEvent>`, we can instead use `EmptyState`.
+    impl EmptyState for GameplayState {
+        fn handle_event(&mut self, _data: StateData<()>, event: StateEvent) -> EmptyTrans {
+            if let StateEvent::Window(event) = &event {
+                if is_key_down(&event, VirtualKeyCode::Escape) {
+                    // Pause the game by going to the `PausedState`.
+                    return Trans::Push(Box::new(PausedState));
+                }
+            }
+    
+            // Escape isn't pressed, so we stay in this `State`.
+            Trans::None
+        }
+    }
+    
+    impl EmptyState for PausedState {
+        fn handle_event(&mut self, _data: StateData<()>, event: StateEvent) -> EmptyTrans {
+            if let StateEvent::Window(event) = &event {
+                if is_key_down(&event, VirtualKeyCode::Escape) {
+                    // Go back to the `GameplayState`.
+                    return Trans::Pop;
+                }
+            }
+    
+            // Escape isn't pressed, so we stay in this `State`.
+            Trans::None
+        }
+    }
+
+# Event Handling
+> As you already saw, we can handle events from the handle_event method. But what is this weired StateEvent all about?
+
+Well, it is simply an enum. It regroups multiple types of events that are emitted throughout the engine by default. To change the set of events that the state receives, you create a new event enum and derive EventReader for that type.
+
+    #[macro_use] extern crate amethyst;
+    use amethyst::prelude::*;
+    use amethyst::ui::UiEvent;
+    use amethyst::input::{VirtualKeyCode, is_key_down};
+    use amethyst::winit::Event;
+    
+    // These imports are required for the #[derive(EventReader)] code to build
+    use amethyst::core::{
+        ecs::{Read, SystemData, World},
+        shrev::{ReaderId, EventChannel},
+        EventReader
+    };
+    
+    #[derive(Clone, Debug)]
+    pub struct AppEvent {
+        data: i32,
+    }
+    
+    #[derive(Debug, EventReader, Clone)]
+    #[reader(MyEventReader)]
+    pub enum MyEvent {
+        Window(Event),
+        Ui(UiEvent),
+        App(AppEvent),
+    }
+    
+    struct GameplayState;
+    
+    impl State<(), MyEvent> for GameplayState {
+        fn handle_event(&mut self, _data: StateData<()>, event: MyEvent) -> Trans<(), MyEvent> {
+            match event {
+                MyEvent::Window(_) => {}, // Events related to the window and inputs.
+                MyEvent::Ui(_) => {}, // Ui event. Button presses, mouse hover, etc...
+                MyEvent::App(ev) => println!("Got an app event: {:?}", ev),
+            };
+    
+            Trans::None
+        }
+    }
+    
+    fn main() {}
+
+To make Application aware of the change to which events to send to the state, you also need to supply both the event type, and the EventReader type (the name you give in the #[reader(SomeReader)] derive attribute) when the Application is created.
+ 
+ 
+ **This is done by replacing Application::build (or Application::new) with CoreApplication::<_, MyEvent, MyEventReader>::build() (or CoreApplication::<_, MyEvent, MyEventReader>::new()).**
