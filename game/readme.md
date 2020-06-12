@@ -311,3 +311,69 @@ We can separate bottle's properties into PositionComponent and BottleComponent, 
 
 **entities do not store data. Nor do they know any information about their components. 
 They serve the purpose of object identification and tracking object existence. The component storage stores all the data and their connection to entities.**
+
+# EntitiesRes
+> Even though the structure of the entity is pretty simple, entity manipulation is very sophisticated and crucial to game performance. This is why entities are handled exclusively by the struct EntitiesRes. EntitiesRes provides two ways for creating/deleting entities:
+
+- Immediate creation/deletion, used for game setup or clean up
+- Lazy creation/deletion, used in the game play state. It updates entities in batch at the end of each game loop. This is also referred to as atomic creation/deletion
+
+You will see how these methods are used in later chapters.
+
+# Declaring a component
+> To declare a component, you first declare the relevant underlying data:
+
+    extern crate amethyst;
+    use amethyst::core::math::{Isometry3, Vector3};
+    
+    /// This `Component` describes the shape of an `Entity`
+    enum Shape {
+        Sphere { radius: f32 },
+        Cuboid { height: f32, width: f32, depth: f32 },
+    }
+    
+    /// This `Component` describes the transform of an `Entity`
+    pub struct Transform {
+        /// Translation + rotation value
+        iso: Isometry3<f32>,
+        /// Scale vector
+        scale: Vector3<f32>,
+    }
+
+
+and then you implement the Component trait for them:
+
+    use amethyst::ecs::{Component, DenseVecStorage, FlaggedStorage};
+    
+    impl Component for Shape {
+        type Storage = DenseVecStorage<Self>;
+    }
+    
+    impl Component for Transform {
+        type Storage = FlaggedStorage<Self, DenseVecStorage<Self>>;
+    }
+    
+The storage type will determine how you store the component, but it will not initialize the storage. Storage is initialized when you register a component in World or when you use that component in a System.
+
+# Storages
+> There are a few storage strategies for different usage scenarios. The most commonly used types are DenseVecStorage, VecStorage and FlaggedStorage.
+
+- *DenseVecStorage*: Elements are stored in a contiguous vector. No empty space is left between Component S, allowing a lowered memory usage for big components.
+- *VecStorage*: Elements are stored into a sparse array. The entity id is the same as the index of component. If your component is small (<= 16 bytes) or is carried by most entities, this is preferable over DenseVecStorage.
+- *FlaggedStorage*: Used to keep track of changes of a component. Useful for caching purposes.
+
+
+    DenseVecStorage ( entity_id maps to data_id )
+    data        data	data	data	data	...
+    data_id     0	    2	    3	    1	    ...
+    entity_id   0       1       5       9       ...
+
+    VecStorage ( entity_id = data index, can be empty )
+    data   data	data	empty	data	...
+
+For more information, see the specs storage reference and the "Storages" section of the specs book.
+
+There are a bunch more storages, and deciding which one is the best isn't trivial and should be done based on careful benchmarking. A general rule is: if your component is used in over 30% of entities, use VecStorage. If you don't know which one you should use, DenseVecStorage is a good default. It will need more memory than VecStorage for pointer-sized components, but it will perform well for most scenarios.
+
+# Tags
+> Components can also be used to "tag" entities. The usual way to do it is to create an empty struct, and implement Component using NullStorage as the Storage type for it. Null storage means that it is not going to take memory space to store those components.
