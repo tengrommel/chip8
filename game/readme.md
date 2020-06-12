@@ -377,3 +377,5 @@ There are a bunch more storages, and deciding which one is the best isn't trivia
 
 # Tags
 > Components can also be used to "tag" entities. The usual way to do it is to create an empty struct, and implement Component using NullStorage as the Storage type for it. Null storage means that it is not going to take memory space to store those components.
+
+# Resource
