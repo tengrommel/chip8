@@ -555,3 +555,26 @@ Sometimes, you will want to create an entity where you need to fetch resources t
     world.exec(|mut data: SomeSystemData| {
             data.do_something();
     });
+
+# System
+> A system is where the logic of the game is executed. In practice, it consists of a struct implementing a function executed on every iteration of the game loop, and taking as taking as an argument data about the game.
+
+Systems can be seen as a small unit of logic. All systems are run by the engine together (even in parallel when possible), and do a specialized operation on one or a group of entities.
+
+# Structure
+
+A system struct is a structure implementing the trait amethyst::ecs::System.
+
+Here is a very simple example implementation:
+
+    struct MyFirstSystem;
+    
+    impl<'a> System<'a> for MyFirstSystem {
+        type SystemData = ();
+    
+        fn run(&mut self, data: Self::SystemData) {
+            println!("Hello!");
+        }
+    }
+    
+This system will, on every iteration of the game loop, print "Hello!" in the console. This is a pretty boring system as it does not interact at all with the game. Let us spice it up a bit.
