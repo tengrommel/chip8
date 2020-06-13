@@ -379,3 +379,179 @@ There are a bunch more storages, and deciding which one is the best isn't trivia
 > Components can also be used to "tag" entities. The usual way to do it is to create an empty struct, and implement Component using NullStorage as the Storage type for it. Null storage means that it is not going to take memory space to store those components.
 
 # Resource
+> A resource is any type that stores data that you might need for your game AND that is not specific to an entity. 
+
+For example, the score of a pong game is global to the whole game and isn't owned by any of the entities (paddle, ball and even the ui score text).
+
+# Creating a resource
+> Resource are stored in the World container.
+
+Adding a resource to a World instance is done like this:
+
+    extern crate amethyst;
+    use amethyst::ecs::World;
+    
+    struct MyResource {
+        pub game_score: i32,
+    }
+    
+    fn main() {
+        let mut world = World::empty();
+        
+        let my = MyResource {
+            game_score: 0,
+        };
+        
+        world.insert(my);
+    }
+
+# Fetching a resource(from World)
+> Fetching a resource can be done like this:
+
+    // try_fetch returns a Option<Fetch<MyResource>>
+    let fetched = world.try_fetch::<MyResource>();
+    if let Some(fetched_resource) = fetched {
+        //dereference Fetch<MyResource> to access data
+        assert_eq!(*fetched_resource, MyResource{ game_score: 0, });
+    } else {
+        println!("No MyResource present in `World`");
+    }
+    
+If you want to get a resource and create it if it doesn't exist.
+
+    // If the resource isn't inside `World`, 
+    // it will insert the instance we created earlier.
+    let fetched = world.entry::<MyResource>().or_insert_with(|| my);
+
+
+If you want to change a resource that is already inside of World:
+
+      // try_fetch_mut returns a Option<FetchMut<MyResource>>
+      let fetched = world.try_fetch_mut::<MyResource>();
+      if let Some(mut fetched_resource) = fetched {
+        assert_eq!(fetched_resource.game_score, 0);
+        fetched_resource.game_score = 10;
+        assert_eq!(fetched_resource.game_score, 10);
+      } else {
+        println!("No MyResource present in `World`");
+      }
+      
+# Deleting a resource
+> There is no method to properly "delete" a resource added to the world. The usual method to achieve something similar is to add an Option<MyResource> and to set it to None when you want to delete it.
+
+# Storages, part2
+> A Component'S Storage is a resource. The components are "attached" to entities, but as said previously, they are not "owned" by the entities at the implementation level. 
+
+By storing them into Storage S and by having Storage be placed inside World, it allows global access to all of the components at runtime with minimal effort.
+
+Actually accessing the components inside Storages will be covered in the world and system sections of the book.
+
+**WARNING**: If you try to fetch the component directly, you will not get the storage. You will get a Default::default() instance of that component. To get the Storage resource that HOLDS all the MyComponent instances, you need to fetch ReadStorage<MyComponent>.
+
+# World
+> A World is a container for resources, with some helper functions that make your life easier. This chapter will showcase those functions and their usage.
+
+# Adding a resource
+
+    use amethyst::ecs::{World, WorldExt};
+    
+    // A simple struct with no data.
+    struct MyResource;
+    
+    fn main() {
+        // We create a new `World` instance.
+        let mut world = World::new();
+        
+        // We create our resource.
+        let my = MyResource;
+        
+        // We add the resource to the world.
+        world.insert(my);
+    }
+
+# Fetching a resource
+> Here's how to fetch a read-only resource. Be aware that this method panics if the resource isn't inserted into Resources.
+
+    let my = world.read_resource::<MyResource>();
+    
+If you are not sure that the resource will be present, use the methods available on Resources, as shown in the resource chapter.
+
+    let my = world.entry::<MyResource>().or_insert_with(|| MyResource);
+
+# Modifying a resource
+
+    let mut my = world.write_resource::<MyResource>();
+    
+# Creating entities
+> You first start by creating the entity builder. Then, you can add components to your entity. Finally, you call the build() method on the entity builder to get the actual entity. Please note that *in order to use this syntax, you need to import the amethyst::prelude::Builder trait.*
+
+    world.register::<MyComponent>();
+    use amethyst::prelude::Builder;
+    
+    let mut entity_builder = world.create_entity();
+    entity_builder = entity_builder.with(MyComponent);
+    let my_entity = entity_builder.build();
+
+Shorter version:
+    
+    use amethyst::prelude::Builder;
+    let my_entity = world
+        .create_entity()
+        .with(MyComponet)
+        .build();
+
+Internally, the World interacts with EntitiesRes, which is a resource holding the entities inside of Resources.
+
+# Accessing a Component
+
+    // Create an `Entity` with `MyComponent`.
+    // `World` will implicitly write to the component's storage in `Resources`.
+    let my_entity = world.create_entity().with(MyComponent).build();
+        
+    // Get a ReadStorage<MyComponent>
+    let storage = world.read_storage::<MyComponent>();
+        
+    // Get the actual component from the storage.
+    let my = storage.get(my_entity).expect("Failed to get component for entity");
+    
+# Modifying a Component
+> This is almost the same as accessing a component:
+    
+    let my_entity = world.create_entity().with(MyComponent).build();
+    let mut storage = world.write_storage::<MyComponent>();
+    let mut my = storage.get_mut(my_entity).expect("Failed to get component for entity");
+    
+# Getting all entities
+> It is pretty rare to use this, but can be useful in some occasions.
+    
+    let entities = world.entities();
+
+# Delete an entity
+
+Single:
+
+    world.delete_entity(my_entity).expect("Failed to delete entity. Was it already removed?");
+    
+Multiple:
+    
+    world.delete_entities(entity_vec.as_slice()).expect("Failed to delete entities from specified list.");
+
+All:
+    
+    world.delete_all();
+
+**Note**: Entities are lazily deleted, which means that deletion only happens at the end of the frame and not immediately when calling the delete method.
+
+# Check if the entity was deleted
+
+    let is_alive = world.is_alive(my_entity);
+    
+# Exec
+
+> This is just to show that this feature exists. It is normal to not understand what it does until you read the system chapter
+
+Sometimes, you will want to create an entity where you need to fetch resources to create the correct components for it. There is a function that acts as a shorthand for this:
+
+    world.exec(|mut data: SomeSystemData| {
+            data.do_something();
+    });
