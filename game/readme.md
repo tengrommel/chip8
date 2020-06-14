@@ -578,3 +578,18 @@ Here is a very simple example implementation:
     }
     
 This system will, on every iteration of the game loop, print "Hello!" in the console. This is a pretty boring system as it does not interact at all with the game. Let us spice it up a bit.
+
+# Accessing the context of the game
+> In the definition of a system, the requires you to define a type SystemData.
+
+This type defines what data the system will be provided with on each call of its run method. SystemData is only meant to carry information accessible to multiple systems. Data local to a system is usually stored in the system's struct itself instead.
+
+*The Amethyst engine provides useful system data types to use in order to access the context of a game. Here are some of the most important ones:*
+
+- Read<'a, Resource> (respectively Write<'a, Resource>) allows you to obtain an immutable (respectively mutable) reference to a resource of the type you specify. This is guaranteed to not fail as if the resource is not available, it will give you the Default::default() of your resource.
+
+- ReadExpect<'a, Resource> (respectively WriteExpect<'a, Resource>) is a failable alternative to the previous system data, so that you can use resources that do not implement the Default trait.
+
+- ReadStorage<'a, Component> (respectively WriteStorage<'a, Component>) allows you to obtain an immutable (respectively mutable) reference to the entire storage of a certain Component type.
+
+- Entities<'a> allows you to create or destroy entities in the context of a system.
