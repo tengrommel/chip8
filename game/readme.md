@@ -606,3 +606,22 @@ This type defines what data the system will be provided with on each call of its
     }
     
  Here, we get the *amethyst::core::timing::Time* resource to print in the console the time elapsed between two frames. Nice! But that's still a bit boring.
+ 
+# Manipulating storages
+>Once you have access to a storage, you can use them in different ways.
+
+## Getting a component of a specific entity
+
+Sometimes, it can be useful to get a component in the storage for a specific entity. This can easily be done using the get or, for mutable storages, get_mut methods.
+
+    struct WalkPlayerUp {
+        player: Entity,
+    }
+    
+    impl<'a> System<'a> for WalkPlayerUp {
+        type SystemData = WriteStorage<'a, Transform>;
+    
+        fn run(&mut self, mut transforms: Self::SystemData) {
+            transforms.get_mut(self.player).unwrap().prepend_translation_y(0.1);
+        }
+    }
