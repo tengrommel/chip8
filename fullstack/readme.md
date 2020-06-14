@@ -56,3 +56,32 @@ these aspects as we make our numbers crate do something more interesting.
 distinction being that Rust differentiates between:
 - a function temporarily having access to a variable (borrowing) and
 - having ownership of a variable.
+
+# Wrapping up
+
+The Rust language is designed to allow fine grained control over performance and reliability while writing code at a high level of abstraction. 
+
+The cost is thus learning the abstractions and dealing with the cognitive load of making choices as you design a program. These considerations are important for production quality code as you profile and optimize where you find bottlenecks. However, following the standards of the community will get you the majority of the way to high quality applications.
+
+We will not belabor all of the nuance in the finer points of making every decision along the way.Our goal is to provide a solid foundation upon which you can explore alternatives as necessary by using the standard library documentation.
+
+# Making A Web App With Actix
+
+# Web Ecosystem
+> One area where Rust stands out is in the building of web servers.
+
+Rust has its origins at Mozilla primarily as a tool for building a new browser engine.
+
+The existing engine being written in C++ combined with the syntactical similarities encourages the idea the Rust was meant to be a replacement for C++. There is obviously some truth to this, but in many ways this characterization sells Rust’s potential short. While it is capable of being a systems programming language, there are a plethora of language features that make it suitable for innumerable programming tasks, including building web servers.
+
+There are a few different layers to the web programming stack. Primarily we are concerned here with the application layer which is comparable to where Django, Rails, and Express live in Python, Ruby, and NodeJS, respectively
+
+The ecosystem around web application development in Rust is still quite nascent despite the Rust language hitting 1.0 in 2015. Much of the underlying infrastructure for building concurrent programs took until 2019 to reach a maturity sufficient to be included in the stable version of the standard library.
+
+*However, most of the ecosystem has coalesced around similar ideas which take advantage of Rust's particular features.*
+
+# Actix
+> The Actix project is actually a group of projects which define an actor system as well as a framework for building web applications. The web framework is aptly named actix-web.
+
+It has been built on top of futures and async primitives from the beginning. It also runs on the stable version of the compiler.
+
