@@ -593,3 +593,16 @@ This type defines what data the system will be provided with on each call of its
 - ReadStorage<'a, Component> (respectively WriteStorage<'a, Component>) allows you to obtain an immutable (respectively mutable) reference to the entire storage of a certain Component type.
 
 - Entities<'a> allows you to create or destroy entities in the context of a system.
+
+
+    struct MyFirstSystem;
+    
+    impl<'a> System<'a> for MyFirstSystem {
+        type SystemData = Read<'a, Time>;
+    
+        fn run(&mut self, data: Self::SystemData) {
+            println!("{}", data.delta_seconds());
+        }
+    }
+    
+ Here, we get the *amethyst::core::timing::Time* resource to print in the console the time elapsed between two frames. Nice! But that's still a bit boring.
