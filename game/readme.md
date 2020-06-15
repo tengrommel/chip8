@@ -827,3 +827,297 @@ The following example shows how to keep track of which state we are currently in
 
 In Amethyst, the World that the application begins with is populated with a number of default resources -- event channels, a thread pool, a frame limiter, and so on.
 
+Given the default resources begin with special limits, we need a way to pass the System initialization logic through to the application, including parameters to the System's constructor. This is information the SystemDesc trait captures.
+
+For each System, an implementation of the SystemDesc trait specifies the logic to instantiate the System. For Systems that do not require special initialization logic, the SystemDesc derive automatically implements the SystemDesc trait on the system type itself:
+
+    use amethyst::{
+        core::SystemDesc,
+        derive::SystemDesc,
+        ecs::{System, SystemData, World},
+    };
+    
+    #[derive(SystemDesc)]
+    struct SystemName;
+    
+    impl<'a> System<'a> for SystemName {
+        type SystemData = ();
+    
+        fn run(&mut self, data: Self::SystemData) {
+            println!("Hello!");
+        }
+    }
+    
+# SystemDesc Derive
+> The SystemDesc derive supports the following cases when generating a SystemDesc trait implementation:
+
+- Parameters to pass to the system constructor
+- Fields to skip -- defaulted by the system constructor
+- Registering a ReaderId for an EventChannel<_> in the World
+- Registering a ReaderId to a component's FlaggedStorage
+- Inserting a resource into the world
+
+# Passing parameters to system constructor
+    
+    #[derive(SystemDesc)]
+    #[system_desc(name(SystemNameDesc))]
+    pub struct SystemName {
+        field_0: u32,
+        field_1: String,
+    }
+    
+    impl SystemName {
+        fn new(field_0: u32, field_1: String) -> Self {
+            SystemName { field_0, field_1 }
+        }
+    }
+
+# Fields to skip -- defaulted by the system constructor
+
+    #[derive(SystemDesc)]
+    #[system_desc(name(SystemNameDesc))]
+    pub struct SystemName {
+        #[system_desc(skip)]
+        field_0: u32,
+        field_1: String,
+    }
+    
+    impl SystemName {
+        fn new(field_1: String) -> Self {
+            SystemName { field_0: 123, field_1 }
+        }
+    }
+
+Note: If there are no field parameters, the SystemDesc implementation will call SystemName::default():
+
+    #[derive(Default, SystemDesc)]
+    #[system_desc(name(SystemNameDesc))]
+    pub struct SystemName {
+        #[system_desc(skip)]
+        field_0: u32,
+    }
+
+# Registering a ReaderId for an EventChannel<_> in the World
+
+    #[derive(SystemDesc)]
+    #[system_desc(name(SystemNameDesc))]
+    pub struct SystemName {
+        #[system_desc(event_channel_reader)]
+        reader_id: ReaderId<UiEvent>,
+    }
+    
+    impl SystemName {
+        fn new(reader_id: ReaderId<UiEvent>) -> Self {
+            SystemName { reader_id }
+        }
+    }
+    
+# Registering a ReaderId to a component's FlaggedStorage
+
+    #[derive(SystemDesc)]
+    #[system_desc(name(SystemNameDesc))]
+    pub struct SystemName {
+        #[system_desc(flagged_storage_reader(UiResize))]
+        resize_events_id: ReaderId<ComponentEvent>,
+    }
+    
+    impl SystemName {
+        fn new(resize_events_id: ReaderId<ComponentEvent>) -> Self {
+            SystemName { resize_events_id }
+        }
+    }
+
+# Inserting a resource into the World
+
+    pub struct NonDefault;
+    
+    #[derive(Default, SystemDesc)]
+    #[system_desc(insert(NonDefault))]
+    pub struct SystemName;
+    
+    impl<'a> System<'a> for SystemName {
+        type SystemData = ReadExpect<'a, NonDefault>;
+        fn run(&mut self, data: Self::SystemData) {}
+    }
+
+# Implementing the SystemDesc Trait
+> If the SystemDesc derive is unable to generate a SystemDesc trait implementation for system initialization, the SystemDesc trait can be implemented manually:
+
+    use amethyst::{
+        audio::output::Output,
+        core::SystemDesc,
+        ecs::{System, SystemData, World},
+    };
+    
+    /// Builds an `AudioSystem`.
+    #[derive(Default, Debug)]
+    pub struct AudioSystemDesc {
+        /// Audio `Output`.
+        pub output: Output,
+    }
+    
+    impl<'a, 'b> SystemDesc<'a, 'b, AudioSystem> for AudioSystemDesc {
+        fn build(self, world: &mut World) -> AudioSystem {
+            <AudioSystem as System<'_>>::SystemData::setup(world);
+    
+            world.insert(self.output.clone());
+    
+            AudioSystem(self.output)
+        }
+    }
+    
+    // in `main.rs`:
+    // let game_data = GameDataBuilder::default()
+    //     .with_system_desc(AudioSystemDesc::default(), "", &[]);
+    
+# Templates
+
+    use amethyst_core::SystemDesc;
+    
+    /// Builds a `SystemName`.
+    #[derive(Default, Debug)]
+    pub struct SystemNameDesc;
+    
+    impl<'a, 'b> SystemDesc<'a, 'b, SystemName> for SystemNameDesc {
+        fn build(self, world: &mut World) -> SystemName {
+            <SystemName as System<'_>>::SystemData::setup(world);
+    
+            let arg = unimplemented!("Replace code here");
+    
+            SystemName::new(arg)
+        }
+    }
+
+With type parameters:
+    
+    use std::marker::PhantomData;
+    
+    use derivative::Derivative;
+    
+    use amethyst_core::ecs::SystemData;
+    use amethyst_core::SystemDesc;
+    
+    /// Builds a `SystemName`.
+    #[derive(Derivative, Debug)]
+    #[derivative(Default(bound = ""))]
+    pub struct SystemNameDesc<T> {
+        marker: PhantomData<T>,
+    }
+    
+    impl<'a, 'b, T> SystemDesc<'a, 'b, SystemName<T>>
+        for SystemNameDesc<T>
+    where
+        T: unimplemented!("Replace me."),
+    {
+        fn build(self, world: &mut World) -> SystemName<T> {
+            <SystemName<T> as System<'_>>::SystemData::setup(world);
+    
+            let arg = unimplemented!("Replace code here");
+    
+            SystemName::new(arg)
+        }
+    }
+
+# Dispatcher
+> Dispatchers are the heart of the ECS infrastructure. They are the executors that decide when the Systems will be executed so that they don't walk over each other.
+
+When a dispatcher is created, it is associated with the systems that it will execute. It then generates an execution plan that respects mutability rules while maximizing parallelism.
+
+# Respecting mutability rules
+> When a system wants to access a Storage or a resource, they can do so either mutably or immutably. This works just like in Rust: either only one system can request something mutably and no other system can access it, or multiple systems can request something but only immutably.
+
+The dispatcher looks at all the SystemData in the systems and builds execution stages.
+
+If you want to have the best performance possible, you should prefer immutable over mutable whenever it is possible. (Read instead of Write, ReadStorage instead of WriteStorage).
+    
+# Event Channel
+> An EventChannel is a broadcast queue of events. Events may be any type that implements Send + Sync + 'static.
+
+
+# Creating an event channel
+
+    // In the following examples, `MyEvent` is the event type of the channel.
+    #[derive(Debug)]
+    pub enum MyEvent {
+        A,
+        B,
+    }
+    
+    let mut channel = EventChannel::<MyEvent>::new();
+
+# Writing events to the event channel
+
+- Single:
+    
+    
+    channel.single_write(MyEvent::A);
+    
+- Multiple:
+    
+    
+    channel.iter_write(vec![MyEvent::A, MyEvent::A, MyEvent::B].into_iter());
+    
+# Reading events
+
+EventChannels guarantee sending events in order to each reader.
+
+To subscribe to events, register a reader against the EventChannel to receive a ReaderId:
+
+    let mut reader_id = channel.register_reader();
+    
+When reading events, pass the ReaderId in:
+
+    for event in channel.read(&mut reader_id) {
+        // The type of the event is inferred from the generic type
+        // we assigned to the `EventChannel<MyEvent>` earlier when creating it.
+        println!("Received event value of: {:?}", event);
+    }
+
+# Patterns
+> When using the event channel, we usually re-use the same pattern over and over again to maximize parallelism. It goes as follow:
+
+- Create the event channel and add it to the world during State creation:
+  
+    
+    world.insert(EventChannel::<MyEvent>::new());
+
+- In the producer System, get a mutable reference to your resource:
+
+
+    type SystemData = Write<'a, EventChannel<MyEvent>>;
+    
+- In the receiver Systems, you need to store the ReaderId somewhere.
+
+
+    struct ReceiverSystem {
+        // The type inside of ReaderId should be the type of the event you are using.
+        reader: Option<ReaderId<MyEvent>>,
+    }
+
+- and you also need to get read access:
+
+
+    type SystemData = Read<'a, EventChannel<MyEvent>>;
+    
+- Then, in the System's new method:
+
+
+    impl MySystem {
+        pub fn new(world: &mut World) -> Self {
+            <Self as System<'_>>::SystemData::setup(world);
+            let reader_id = world.fetch_mut::<EventChannel<MyEvent>>().register_reader();
+            Self { reader_id }
+        }
+    }
+    
+- Finally, you can read events from your System.
+
+  
+    impl<'a> amethyst::ecs::System<'a> for MySystem {
+        type SystemData = Read<'a, EventChannel<MyEvent>>;
+        fn run(&mut self, my_event_channel: Self::SystemData) {
+            for event in my_event_channel.read(&mut self.reader_id) {
+                println!("Received an event: {:?}", event);
+            }
+        }
+    }
