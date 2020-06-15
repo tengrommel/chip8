@@ -625,3 +625,205 @@ Sometimes, it can be useful to get a component in the storage for a specific ent
             transforms.get_mut(self.player).unwrap().prepend_translation_y(0.1);
         }
     }
+
+This system makes the player go up by 0.1 unit every iteration of the game loop! To identify what entity the player is, we stored it beforehand in the system's struct. Then, we get its *Transform* from the transform storage, and move it along the Y axis by 0.1.
+
+# Getting all entities with specific components
+
+Most of the time, you will want to perform logic on all entities with a specific component, or even all entities with a selection of components.
+
+This is possible using the join method. You may be familiar with joining operations if you have ever worked with databases. The join method takes multiple storages, and iterates over all entities that have a component in each of those storages. It works like an "AND" gate. It will return an iterator containing a tuple of all the requested components if they are ALL on the same entity.
+
+**If you join with components A, B and C, only the entities that have ALL those components will be considered.**
+
+Needless to say that you can use it with only one storage to iterate over all entities with a specific component.
+
+Keep in mind that the join method is only available by importing amethyst::ecs::Join.
+
+    
+
+    use amethyst::ecs::Join;
+    
+    struct MakeObjectsFall;
+    
+    impl<'a> System<'a> for MakeObjectsFall {
+        type SystemData = (
+            WriteStorage<'a, Transform>,
+            ReadStorage<'a, FallingObject>,
+        );
+    
+        fn run(&mut self, (mut transforms, falling): Self::SystemData) {
+            for (mut transform, _) in (&mut transforms, &falling).join() {
+                if transform.translation().y > 0.0 {
+                    transform.prepend_translation_y(-0.1);
+                }
+            }
+        }
+    }
+
+# Manipulating the structure of entities
+
+It may sometimes be interesting to manipulate the structure of entities in a system, such as creating new ones or modifying the component layout of existing ones. This kind of process is done using the Entities<'a> system data.
+
+
+# Creating new entities in a system
+> Creating an entity while in the context of a system is very similar to the way one would create an entity using the World struct. The only difference is that one needs to provide mutable storages of all the components they plan to add to the entity.
+
+    struct SpawnEnemies {
+        counter: u32,
+    }
+    
+    impl<'a> System<'a> for SpawnEnemies {
+        type SystemData = (
+            WriteStorage<'a, Transform>,
+            WriteStorage<'a, Enemy>,
+            Entities<'a>,
+        );
+    
+        fn run(&mut self, (mut transforms, mut enemies, entities): Self::SystemData) {
+            self.counter += 1;
+            if self.counter > 200 {
+                entities.build_entity()
+                    .with(Transform::default(), &mut transforms)
+                    .with(Enemy, &mut enemies)
+                    .build();
+                self.counter = 0;
+            }
+        }
+    }
+
+# Removing an entity
+>Deleting an entity is very easy using Entities<'a>
+
+    entities.delete(entity);
+    
+# Iterating over components with associated entity
+> Sometimes, when you iterate over components, you may want to also know what entity you are working with. To do that, you can use the joining operation with Entities<'a>
+
+    struct MakeObjectsFall;
+    
+    impl<'a> System<'a> for MakeObjectsFall {
+        type SystemData = (
+            Entities<'a>,
+            WriteStorage<'a, Transform>,
+            ReadStorage<'a, FallingObject>,
+        );
+    
+        fn run(&mut self, (entities, mut transforms, falling): Self::SystemData) {
+            for (e, mut transform, _) in (&*entities, &mut transforms, &falling).join() {
+                if transform.translation().y > 0.0 {
+                    transform.prepend_translation_y(-0.1);
+                } else {
+                    entities.delete(e);
+                }
+            }
+        }
+    }
+
+# Adding or removing components
+
+You can also insert or remove components from a specific entity. To do that, you need to get a mutable storage of the component you want to modify, and simply do:
+
+    // Add the component
+    write_storage.insert(entity, MyComponent);
+    
+    // Remove the component
+    write_storage.remove(entity);
+
+# Changing states through resources
+> The data in a resource is available both to systems and states. We can use this to our advantage!
+
+Let's say you have the following two states:
+
+- GameplayState: State in which the game is running
+- GameMenuState: State where the game is paused and we interact with a game menu.
+
+The following example shows how to keep track of which state we are currently in. This allows us to do a bit of conditional logic in our systems to determine what to do depending on which state is currently active, and manipulating the states by tracking user actions:
+
+    use amethyst::prelude::*;
+    
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum CurrentState {
+        MainMenu,
+        Gameplay,
+    }
+    
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum UserAction {
+        OpenMenu,
+        ResumeGame,
+        Quit,
+    }
+    
+    impl Default for CurrentState {
+        fn default() -> Self {
+            CurrentState::Gameplay
+        }
+    }
+    
+    struct Game {
+        user_action: Option<UserAction>,
+        current_state: CurrentState,
+    }
+    
+    impl Default for Game {
+        fn default() -> Self {
+            Game {
+                user_action: None,
+                current_state: CurrentState::default(),
+            }
+        }
+    }
+    
+    struct GameplayState;
+    
+    impl SimpleState for GameplayState {
+        fn update(&mut self, data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
+            // If the `Game` resource has been set up to go back to the menu, push
+            // the menu state so that we go back.
+    
+            let mut game = data.world.write_resource::<Game>();
+    
+            if let Some(UserAction::OpenMenu) = game.user_action.take() {
+                return Trans::Push(Box::new(GameMenuState));
+            }
+    
+            Trans::None
+        }
+    
+        fn on_resume(&mut self, mut data: StateData<'_, GameData<'_, '_>>) {
+            // mark that the current state is a gameplay state.
+            data.world.write_resource::<Game>().current_state = CurrentState::Gameplay;
+        }
+    }
+    
+    struct GameMenuState;
+    
+    impl SimpleState for GameMenuState {
+        fn update(&mut self, data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
+            let mut game = data.world.write_resource::<Game>();
+    
+            match game.user_action.take() {
+                Some(UserAction::ResumeGame) => Trans::Pop,
+                Some(UserAction::Quit) => {
+                    // Note: no need to clean up :)
+                    Trans::Quit
+                },
+                _ => Trans::None,
+            }
+        }
+    
+        fn on_resume(&mut self, mut data: StateData<'_, GameData<'_, '_>>) {
+            // mark that the current state is a main menu state.
+            data.world.write_resource::<Game>().current_state = CurrentState::MainMenu;
+        }
+    }
+    
+# The SystemData trait
+> While this is rarely useful, it is possible to create SystemData types.
+
+## System Initialization
+> Systems may need to access resources from the World in order to be instantiated. For example, obtaining a ReaderId to an EventChannel that exists in the World. When there is an existing event channel in the World, a System should register itself as a reader of that channel instead of replacing it, as that invalidates all other readers.
+
+In Amethyst, the World that the application begins with is populated with a number of default resources -- event channels, a thread pool, a frame limiter, and so on.
+
