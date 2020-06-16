@@ -62,7 +62,7 @@ impl Component for Paddle {
     type Storage = DenseVecStorage<Self>;
 }
 
-fn initialise_world(world: &mut World) {
+fn initialise_camera(world: &mut World) {
     // Setup camera in a way that our screen covers whole arena and (0, 0) is in the bottom left.
     let mut transform = Transform::default();
     transform.set_translation_xyz(ARENA_WIDTH * 0.5, ARENA_HEIGHT * 0.5, 1.0);
@@ -71,18 +71,6 @@ fn initialise_world(world: &mut World) {
         .with(Camera::standard_2d(ARENA_WIDTH, ARENA_HEIGHT))
         .with(transform)
         .build();
-}
-
-pub struct Pong;
-
-impl SimpleState for Pong {
-    fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
-        let world = data.world;
-        let sprite_sheet_handle = load_sprite_sheet(world);
-        world.register::<Paddle>();
-        initialise_paddles(world, sprite_sheet_handle);
-        initialise_world(world);
-    }
 }
 
 fn load_sprite_sheet(world: &mut World) -> Handle<SpriteSheet> {
@@ -105,4 +93,16 @@ fn load_sprite_sheet(world: &mut World) -> Handle<SpriteSheet> {
         (),
         &sprite_sheet_store,
     )
+}
+
+pub struct Pong;
+
+impl SimpleState for Pong {
+    fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
+        let world = data.world;
+        let sprite_sheet_handle = load_sprite_sheet(world);
+        world.register::<Paddle>();
+        initialise_paddles(world, sprite_sheet_handle);
+        initialise_camera(world);
+    }
 }
