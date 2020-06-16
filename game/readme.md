@@ -1121,3 +1121,7 @@ When reading events, pass the ReaderId in:
             }
         }
     }
+
+The **Camera::standard_2d** function creates a default 2D camera that is pointed along the world's Z axis. 
+
+The area in front of the camera has a horizontal X axis, and a vertical Y axis. The X axis increases moving to the right, and the Y axis increases moving up. The camera's position is the center of the viewable area. We position the camera with **set_translation_xyz** to the middle of our game arena so that (0, 0) is the bottom left of the viewable area, and (ARENA_WIDTH, ARENA_HEIGHT) is the top right.
