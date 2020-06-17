@@ -30,9 +30,8 @@ fn main() -> amethyst::Result<()> {
         // Add the transform bundle which handles tracking entity positions
         .with_bundle(TransformBundle::new())?
         .with_bundle(
-            InputBundle::<StringBindings>::new().with_bindings_from_file(
-                app_root.join("config/bindings.ron"),
-            )?,
+            InputBundle::<StringBindings>::new()
+                .with_bindings_from_file(app_root.join("config/bindings.ron"))?,
         )?
         .with_bundle(UiBundle::<StringBindings>::new())?
         // We have now added our own systems, defined in the systems module
