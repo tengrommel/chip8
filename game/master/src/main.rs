@@ -1,4 +1,5 @@
 use amethyst::{
+    audio::AudioBundle,
     core::transform::TransformBundle,
     input::{InputBundle, StringBindings},
     prelude::*,
@@ -13,6 +14,7 @@ use amethyst::{
 
 mod pong;
 use pong::Pong;
+mod audio;
 
 mod systems;
 
@@ -27,6 +29,7 @@ fn main() -> amethyst::Result<()> {
     let assets_dir = app_root.join("assets");
 
     let game_data = GameDataBuilder::default()
+        .with_bundle(AudioBundle::default())?
         // Add the transform bundle which handles tracking entity positions
         .with_bundle(TransformBundle::new())?
         .with_bundle(
